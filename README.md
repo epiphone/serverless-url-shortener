@@ -25,3 +25,7 @@ Then start local development server with `sls offline start`.
 ## Deploy
 
 `sls deploy`
+
+## TODO
+- JSON Schema-based request validation at API Gateway
+- Integration tests
