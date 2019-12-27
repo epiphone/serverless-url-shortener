@@ -22,12 +22,35 @@ provider:
     AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
 
 functions:
-  hello:
-    handler: handler.hello
+  getUrl:
+    handler: handler.getUrl
     events:
       - http:
           method: get
-          path: hello
+          path: urls/{id}
+          request:
+          parameters:
+             paths:
+               id: true
+  createUrl:
+    handler: handler.createUrl
+    events:
+      - http:
+          method: post
+          path: urls
+          parameters:
+            querystrings:
+              url: true
+  getStats:
+    handler: handler.getStats
+    events:
+      - http:
+          method: get
+          path: urls/{id}/stats
+          request:
+          parameters:
+             paths:
+               id: true
 
 resources:
   Resources:
