@@ -41,7 +41,11 @@ export const getUrl: APIGatewayProxyHandler = (event, _context, callback) => {
           if (error) {
             callback(error)
           } else {
-            callback(null, { statusCode: 200, body: JSON.stringify(data.Item) })
+            callback(null, {
+              statusCode: 301,
+              headers: { Location: data.Item!.url }, // TODO fix coercion
+              body: 'redirecting to ' + data.Item!.url
+            })
           }
         })
       }
