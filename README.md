@@ -1,4 +1,4 @@
-# Vingle app
+# URL shortener
 
 A simple URL shortener API running on NodeJS/Typescript, deployed on AWS Lamda with the Serverless Framework.
 

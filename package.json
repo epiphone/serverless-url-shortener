@@ -1,5 +1,5 @@
 {
-  "name": "vingle-app",
+  "name": "url-shortener",
   "version": "0.0.1",
   "description": "Serverless webpack example using Typescript",
   "main": "build/handler.js",
@@ -36,6 +36,6 @@
     "webpack": "^4.29.0",
     "webpack-node-externals": "^1.7.2"
   },
-  "author": "The serverless webpack authors (https://github.com/elastic-coders/serverless-webpack)",
+  "author": "Aleksi Pekkala <aleksipekkala@gmail.com>",
   "license": "MIT"
 }

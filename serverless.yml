@@ -1,5 +1,5 @@
 service:
-  name: vingle-app
+  name: url-shortener
 
 custom:
   dynamodb:
