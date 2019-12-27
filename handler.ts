@@ -3,6 +3,7 @@ import * as AWS from 'aws-sdk'
 import * as shortId from 'shortid'
 import 'source-map-support/register'
 
+const REDIRECTS_TABLE = 'redirects'
 const URLS_TABLE = 'urls'
 
 const dynamoDb = process.env.IS_OFFLINE
@@ -21,13 +22,29 @@ export const getUrl: APIGatewayProxyHandler = (event, _context, callback) => {
     (error, data) => {
       if (error) {
         callback(error)
+      } else if (!data.Item) {
+        callback(null, {
+          statusCode: 404,
+          body: JSON.stringify({ error: 'not found' })
+        })
+      } else {
+        const putParams = {
+          TableName: REDIRECTS_TABLE,
+          Item: {
+            id: shortId.generate(),
+            urlId: data.Item.id,
+            timestamp: Date.now()
+          }
+        }
+
+        dynamoDb.put(putParams, error => {
+          if (error) {
+            callback(error)
+          } else {
+            callback(null, { statusCode: 200, body: JSON.stringify(data.Item) })
+          }
+        })
       }
-
-      const response = data.Item
-        ? { statusCode: 200, body: JSON.stringify(data.Item) }
-        : { statusCode: 404, body: JSON.stringify({ error: 'not found' }) }
-
-      callback(null, response)
     }
   )
 }
@@ -77,9 +94,36 @@ export const createUrl: APIGatewayProxyHandler = (
   })
 }
 
-export const getStats: APIGatewayProxyHandler = async (event, _context) => {
-  return {
-    statusCode: 200,
-    body: JSON.stringify({ message: 'stats TODO' })
+export const getStats: APIGatewayProxyHandler = (event, _context, callback) => {
+  const id = event.pathParameters!.id
+  const params = {
+    TableName: REDIRECTS_TABLE
   }
+
+  // TODO fix naive scan query:
+  dynamoDb.scan(params, (error, data) => {
+    if (error) {
+      callback(error)
+    } else {
+      const redirects = (data.Items || [])
+        .filter(item => item.urlId == id)
+        .reduce((acc, item) => {
+          const key = timestampToKey(item.timestamp)
+          if (!(key in acc)) {
+            return { ...acc, [key]: 1 }
+          }
+          return { ...acc, [key]: acc[key] + 1 }
+        }, {})
+
+      callback(null, { statusCode: 200, body: JSON.stringify(redirects) })
+    }
+  })
+}
+
+function timestampToKey(timestamp: number): string {
+  const date = new Date(timestamp)
+  return `${date.toISOString().substr(0, 10)} ${date
+    .getUTCHours()
+    .toString()
+    .padStart(2, '0')}:00:00`
 }

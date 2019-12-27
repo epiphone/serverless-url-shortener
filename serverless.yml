@@ -75,3 +75,17 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
+    # TODO: fix table design to avoid full-table scans:
+    redirectsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: redirects
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1

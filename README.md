@@ -29,3 +29,5 @@ Then start local development server with `sls offline start`.
 ## TODO
 - JSON Schema-based request validation at API Gateway
 - Integration tests
+- Use async DynamoDB client to get rid of nested callbacks
+- Smarter hourly time-series aggregation as opposed to the naive full-table scan
