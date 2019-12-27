@@ -35,7 +35,7 @@ functions:
     events:
       - http:
           method: get
-          path: urls/{id}
+          path: /{id}
           request:
           parameters:
              paths:
@@ -45,7 +45,7 @@ functions:
     events:
       - http:
           method: post
-          path: urls
+          path: /register.json
           parameters:
             querystrings:
               url: true
@@ -54,7 +54,7 @@ functions:
     events:
       - http:
           method: get
-          path: urls/{id}/stats
+          path: /{id}/stats
           request:
           parameters:
              paths:
