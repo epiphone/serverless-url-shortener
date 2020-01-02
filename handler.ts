@@ -1,7 +1,6 @@
 import { APIGatewayProxyHandler } from 'aws-lambda'
 import * as AWS from 'aws-sdk'
 import * as shortId from 'shortid'
-import 'source-map-support/register'
 
 const REDIRECTS_TABLE = 'redirects'
 const URLS_TABLE = 'urls'
