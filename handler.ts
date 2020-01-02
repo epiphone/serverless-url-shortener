@@ -2,7 +2,9 @@ import { APIGatewayProxyHandler } from 'aws-lambda' // tslint:disable-line:no-im
 import * as AWS from 'aws-sdk'
 import * as shortId from 'shortid'
 
+// TODO use env vars:
 const URLS_TABLE = 'urls'
+const URL_INDEX = 'UrlIndex'
 
 const dynamoDb = process.env.IS_OFFLINE
   ? new AWS.DynamoDB.DocumentClient({
@@ -43,22 +45,25 @@ export const getUrl: APIGatewayProxyHandler = async event => {
 
 export const createUrl: APIGatewayProxyHandler = async event => {
   const url = event.queryStringParameters!.url // TODO: handle missing
-  const scanParams = {
-    TableName: URLS_TABLE
+
+  // Check whether URL has already been shortened;
+  // Note the potential race condition though:
+  const queryParams: AWS.DynamoDB.DocumentClient.QueryInput = {
+    TableName: URLS_TABLE,
+    IndexName: URL_INDEX,
+    KeyConditionExpression: '#url = :url',
+    ExpressionAttributeNames: { '#url': 'url' },
+    ExpressionAttributeValues: { ':url': url },
+    ProjectionExpression: 'id',
+    Limit: 1
   }
 
-  // TODO fix scan
-  const data = await dynamoDb.scan(scanParams).promise()
-  const existingUrl = (data.Items || []).find(item => item.url === url)
-
-  if (existingUrl) {
-    return {
-      statusCode: 200,
-      body: JSON.stringify(existingUrl) // TODO: check response body type
-    }
+  const data = await dynamoDb.query(queryParams).promise()
+  if (data.Items && data.Items.length > 0) {
+    return { statusCode: 200, body: JSON.stringify(data.Items[0]) }
   }
 
-  const putParams = {
+  const putParams: AWS.DynamoDB.DocumentClient.PutItemInput = {
     TableName: URLS_TABLE,
     Item: {
       id: shortId.generate(),

@@ -13,7 +13,7 @@ Original version (see [branch](https://github.com/epiphone/serverless-url-shorte
 - [x] ~~Use an async DynamoDB client to get rid of nested callbacks~~
 - [ ] Write an OpenAPI schema and use API Gateway to validate requests
 - [ ] Integration tests: try running integration tests locally against `serverless-offline` and `serverless-dynamodb-local`
-- [ ] Smarter hourly time-series aggregation as opposed to the naive full-table scan
+- [x] ~~Smarter hourly time-series aggregation as opposed to the naive full-table scan~~
 - [ ] CI/CD: build, run tests and lint on GitHub actions + run `sls deploy` if on `master` branch
 - [ ] Set DynamoDB table names as Serverless Framework config variables and pass to Lambda handlers as env vars to avoid hardcoding table names to code
 - [ ] Tune the Lambda IAM policy to avoid overly wide permissions
