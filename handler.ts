@@ -2,9 +2,8 @@ import { APIGatewayProxyHandler } from 'aws-lambda' // tslint:disable-line:no-im
 import * as AWS from 'aws-sdk'
 import * as shortId from 'shortid'
 
-// TODO use env vars:
-const URLS_TABLE = 'urls'
-const URL_INDEX = 'UrlIndex'
+const URLS_TABLE = process.env.URLS_TABLE_NAME!
+const URL_INDEX = process.env.URL_INDEX_NAME!
 
 const dynamoDb = process.env.IS_OFFLINE
   ? new AWS.DynamoDB.DocumentClient({

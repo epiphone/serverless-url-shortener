@@ -2,6 +2,8 @@ service:
   name: url-shortener
 
 custom:
+  urls_table_name: urls
+  url_index_name: UrlIndex
   dynamodb:
     stages:
       - dev
@@ -20,6 +22,8 @@ provider:
     minimumCompressionSize: 1024 # Enable gzip compression for responses > 1 KB
   environment:
     AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+    URLS_TABLE_NAME: ${self:custom.urls_table_name}
+    URL_INDEX_NAME: ${self:custom.url_index_name}
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -65,7 +69,7 @@ resources:
     urlsTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: urls
+        TableName: ${self:custom.urls_table_name}
         AttributeDefinitions:
           - AttributeName: id
             AttributeType: S
@@ -78,7 +82,7 @@ resources:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
         GlobalSecondaryIndexes:
-          - IndexName: UrlIndex
+          - IndexName: ${self:custom.url_index_name}
             KeySchema:
               - AttributeName: url
                 KeyType: HASH
