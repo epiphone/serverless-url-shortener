@@ -1,4 +1,4 @@
-import { APIGatewayProxyHandler } from 'aws-lambda'
+import { APIGatewayProxyHandler } from 'aws-lambda' // tslint:disable-line:no-implicit-dependencies
 import * as AWS from 'aws-sdk'
 import * as shortId from 'shortid'
 
@@ -12,115 +12,87 @@ const dynamoDb = process.env.IS_OFFLINE
     })
   : new AWS.DynamoDB.DocumentClient()
 
-export const getUrl: APIGatewayProxyHandler = (event, _context, callback) => {
-  dynamoDb.get(
-    {
+export const getUrl: APIGatewayProxyHandler = async event => {
+  const data = await dynamoDb
+    .get({
       TableName: URLS_TABLE,
       Key: { id: event.pathParameters!.id }
-    },
-    (error, data) => {
-      if (error) {
-        callback(error)
-      } else if (!data.Item) {
-        callback(null, {
-          statusCode: 404,
-          body: JSON.stringify({ error: 'not found' })
-        })
-      } else {
-        const putParams = {
-          TableName: REDIRECTS_TABLE,
-          Item: {
-            id: shortId.generate(),
-            urlId: data.Item.id,
-            timestamp: Date.now()
-          }
-        }
+    })
+    .promise()
 
-        dynamoDb.put(putParams, error => {
-          if (error) {
-            callback(error)
-          } else {
-            callback(null, {
-              statusCode: 301,
-              headers: { Location: data.Item!.url }, // TODO fix coercion
-              body: 'redirecting to ' + data.Item!.url
-            })
-          }
-        })
-      }
+  if (!data.Item) {
+    return { statusCode: 404, body: JSON.stringify({ error: 'not found' }) }
+  }
+
+  const putParams = {
+    TableName: REDIRECTS_TABLE,
+    Item: {
+      id: shortId.generate(),
+      urlId: data.Item.id,
+      timestamp: Date.now()
     }
-  )
+  }
+
+  await dynamoDb.put(putParams).promise()
+
+  return {
+    statusCode: 301,
+    headers: { Location: data.Item.url },
+    body: 'redirecting to ' + data.Item!.url
+  }
 }
 
-export const createUrl: APIGatewayProxyHandler = (
-  event,
-  _context,
-  callback
-) => {
+export const createUrl: APIGatewayProxyHandler = async event => {
   const url = event.queryStringParameters!.url // TODO: handle missing
   const scanParams = {
     TableName: URLS_TABLE
   }
 
-  dynamoDb.scan(scanParams, (error, data) => {
-    if (error) {
-      callback(error)
-    } else {
-      const existingUrl = (data.Items || []).find(item => item.url === url)
+  const data = await dynamoDb.scan(scanParams).promise()
+  const existingUrl = (data.Items || []).find(item => item.url === url)
 
-      if (existingUrl) {
-        callback(null, {
-          statusCode: 200,
-          body: JSON.stringify(existingUrl) // TODO: check response body type
-        })
-      } else {
-        const putParams = {
-          TableName: URLS_TABLE,
-          Item: {
-            id: shortId.generate(),
-            url
-          }
-        }
-
-        dynamoDb.put(putParams, error => {
-          if (error) {
-            callback(error)
-          } else {
-            callback(null, {
-              statusCode: 201,
-              body: JSON.stringify(putParams.Item)
-            })
-          }
-        })
-      }
+  if (existingUrl) {
+    return {
+      statusCode: 200,
+      body: JSON.stringify(existingUrl) // TODO: check response body type
     }
-  })
+  }
+
+  const putParams = {
+    TableName: URLS_TABLE,
+    Item: {
+      id: shortId.generate(),
+      url
+    }
+  }
+
+  await dynamoDb.put(putParams).promise()
+
+  return {
+    statusCode: 201,
+    body: JSON.stringify(putParams.Item)
+  }
 }
 
-export const getStats: APIGatewayProxyHandler = (event, _context, callback) => {
+export const getStats: APIGatewayProxyHandler = async event => {
   const id = event.pathParameters!.id
   const params = {
     TableName: REDIRECTS_TABLE
   }
 
   // TODO fix naive scan query:
-  dynamoDb.scan(params, (error, data) => {
-    if (error) {
-      callback(error)
-    } else {
-      const redirects = (data.Items || [])
-        .filter(item => item.urlId == id)
-        .reduce((acc, item) => {
-          const key = timestampToKey(item.timestamp)
-          if (!(key in acc)) {
-            return { ...acc, [key]: 1 }
-          }
-          return { ...acc, [key]: acc[key] + 1 }
-        }, {})
+  const data = await dynamoDb.scan(params).promise()
+  const redirects = (data.Items || [])
+    .filter(item => item.urlId === id)
+    .reduce((acc, item) => {
+      const key = timestampToKey(item.timestamp)
+      if (!(key in acc)) {
+        return { ...acc, [key]: 1 }
+      }
+      return { ...acc, [key]: acc[key] + 1 }
+    }, {})
 
-      callback(null, { statusCode: 200, body: JSON.stringify(redirects) })
-    }
-  })
+  return { statusCode: 200, body: JSON.stringify(redirects) }
 }
 
 function timestampToKey(timestamp: number): string {

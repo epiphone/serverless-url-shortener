@@ -10,7 +10,7 @@ Original version (see [branch](https://github.com/epiphone/serverless-url-shorte
 - `GET /{shortUrl}/stats` endpoint that returns hourly redirect counts per given `shortUrl`
 
 ## Future work
-- [ ] Use an async DynamoDB client to get rid of nested callbacks
+- [x] ~~Use an async DynamoDB client to get rid of nested callbacks~~
 - [ ] Write an OpenAPI schema and use API Gateway to validate requests
 - [ ] Integration tests: try running integration tests locally against `serverless-offline` and `serverless-dynamodb-local`
 - [ ] Smarter hourly time-series aggregation as opposed to the naive full-table scan
