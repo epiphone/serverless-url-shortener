@@ -27,6 +27,7 @@ provider:
         - dynamodb:Scan
         - dynamodb:GetItem
         - dynamodb:PutItem
+        - dynamodb:UpdateItem
       Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/*"
 
 functions:
@@ -66,20 +67,6 @@ resources:
       Type: AWS::DynamoDB::Table
       Properties:
         TableName: urls
-        AttributeDefinitions:
-          - AttributeName: id
-            AttributeType: S
-        KeySchema:
-          - AttributeName: id
-            KeyType: HASH
-        ProvisionedThroughput:
-          ReadCapacityUnits: 1
-          WriteCapacityUnits: 1
-    # TODO: fix table design to avoid full-table scans:
-    redirectsTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: redirects
         AttributeDefinitions:
           - AttributeName: id
             AttributeType: S

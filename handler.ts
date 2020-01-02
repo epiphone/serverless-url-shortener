@@ -2,7 +2,6 @@ import { APIGatewayProxyHandler } from 'aws-lambda' // tslint:disable-line:no-im
 import * as AWS from 'aws-sdk'
 import * as shortId from 'shortid'
 
-const REDIRECTS_TABLE = 'redirects'
 const URLS_TABLE = 'urls'
 
 const dynamoDb = process.env.IS_OFFLINE
@@ -13,32 +12,32 @@ const dynamoDb = process.env.IS_OFFLINE
   : new AWS.DynamoDB.DocumentClient()
 
 export const getUrl: APIGatewayProxyHandler = async event => {
-  const data = await dynamoDb
-    .get({
-      TableName: URLS_TABLE,
-      Key: { id: event.pathParameters!.id }
-    })
-    .promise()
+  const id = event.pathParameters!.id
 
-  if (!data.Item) {
-    return { statusCode: 404, body: JSON.stringify({ error: 'not found' }) }
+  const params: AWS.DynamoDB.DocumentClient.UpdateItemInput = {
+    TableName: URLS_TABLE,
+    Key: { id },
+    UpdateExpression:
+      'SET hits.#key = if_not_exists(hits.#key, :default) + :increment',
+    ExpressionAttributeNames: { '#key': timestampToKey(Date.now()) },
+    ExpressionAttributeValues: { ':default': 0, ':increment': 1 },
+    ReturnValues: 'ALL_NEW'
   }
 
-  const putParams = {
-    TableName: REDIRECTS_TABLE,
-    Item: {
-      id: shortId.generate(),
-      urlId: data.Item.id,
-      timestamp: Date.now()
+  try {
+    const data = await dynamoDb.update(params).promise()
+
+    return {
+      statusCode: 301,
+      headers: { Location: data.Attributes!.url },
+      body: 'redirecting to ' + data.Attributes!.url
     }
-  }
+  } catch (error) {
+    if (error.code === 'ValidationException') {
+      return { statusCode: 404, body: JSON.stringify({ error: 'not found' }) }
+    }
 
-  await dynamoDb.put(putParams).promise()
-
-  return {
-    statusCode: 301,
-    headers: { Location: data.Item.url },
-    body: 'redirecting to ' + data.Item!.url
+    throw error
   }
 }
 
@@ -48,6 +47,7 @@ export const createUrl: APIGatewayProxyHandler = async event => {
     TableName: URLS_TABLE
   }
 
+  // TODO fix scan
   const data = await dynamoDb.scan(scanParams).promise()
   const existingUrl = (data.Items || []).find(item => item.url === url)
 
@@ -62,7 +62,8 @@ export const createUrl: APIGatewayProxyHandler = async event => {
     TableName: URLS_TABLE,
     Item: {
       id: shortId.generate(),
-      url
+      url,
+      hits: {}
     }
   }
 
@@ -76,23 +77,20 @@ export const createUrl: APIGatewayProxyHandler = async event => {
 
 export const getStats: APIGatewayProxyHandler = async event => {
   const id = event.pathParameters!.id
-  const params = {
-    TableName: REDIRECTS_TABLE
+
+  const params: AWS.DynamoDB.DocumentClient.GetItemInput = {
+    TableName: URLS_TABLE,
+    Key: { id },
+    ProjectionExpression: 'hits'
   }
 
-  // TODO fix naive scan query:
-  const data = await dynamoDb.scan(params).promise()
-  const redirects = (data.Items || [])
-    .filter(item => item.urlId === id)
-    .reduce((acc, item) => {
-      const key = timestampToKey(item.timestamp)
-      if (!(key in acc)) {
-        return { ...acc, [key]: 1 }
-      }
-      return { ...acc, [key]: acc[key] + 1 }
-    }, {})
+  const data = await dynamoDb.get(params).promise()
 
-  return { statusCode: 200, body: JSON.stringify(redirects) }
+  if (!data.Item) {
+    return { statusCode: 404, body: JSON.stringify({ error: 'not found' }) }
+  }
+
+  return { statusCode: 200, body: JSON.stringify(data.Item.hits) }
 }
 
 function timestampToKey(timestamp: number): string {
